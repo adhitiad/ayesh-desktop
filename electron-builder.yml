@@ -1,0 +1,29 @@
+appId: com.ayesh.desktop
+productName: Ayesh
+directories:
+  output: dist
+files:
+  - src/**/*
+  - proto/**/*
+  - node_modules/**/*
+win:
+  target: nsis
+  icon: assets/icon.ico
+mac:
+  target: dmg
+  icon: assets/icon.icns
+linux:
+  target: AppImage
+  icon: assets/icon.png
+extraResources:
+  - from: proto/ayesh.proto
+    to: proto/ayesh.proto
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+publish:
+  provider: github
+  owner: adhitiad
+  repo: ayesh-desktop

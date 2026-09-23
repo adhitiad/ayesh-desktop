@@ -1,0 +1,41 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+reports/
+.vscode/
+
+# Generated
+src/grpc/
+*.pb.ts
+*.pb.js
+
+# Artifacts
+setup-*.exe
+*.spec
+
+# Dependencies
+*.lock
+uv.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Test
+coverage/
+*.lcov
+
+# Build
+build/
+dist/
