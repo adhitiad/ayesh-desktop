@@ -19,6 +19,8 @@ setup-*.exe
 
 # Dependencies
 *.lock
+bun.lockb
+bun.lock
 uv.lock
 
 # IDE
