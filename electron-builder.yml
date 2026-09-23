@@ -15,9 +15,17 @@ win:
 mac:
   target: dmg
   icon: assets/icon.png
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  entitlements: assets/entitlements.mac.plist
+  entitlementsInherit: assets/entitlements.mac.inherit.plist
 linux:
-  target: AppImage
+  target:
+    - AppImage
+    - deb
+    - rpm
   icon: assets/icon.png
+  category: Utility
 extraResources:
   - from: proto/ayesh.proto
     to: proto/ayesh.proto

@@ -6,6 +6,7 @@ interface ChatChunk {
     name: string;
     status: string;
     progress: number;
+    result?: string;
   }>;
   done: boolean;
   usage?: {
@@ -21,12 +22,16 @@ export function ChatPage({ sessionId = 'session-1' }: { sessionId?: string }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<any>(null);
+  const [toolCalls, setToolCalls] = useState<ChatChunk['toolCalls']>([]);
+  const [usage, setUsage] = useState<ChatChunk['usage'] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsub = (window as any).ayesh.onChunk((chunk: ChatChunk) => {
+      if (chunk.toolCalls && chunk.toolCalls.length > 0) setToolCalls(chunk.toolCalls);
       if (chunk.done) {
         setIsStreaming(false);
+        if (chunk.usage) setUsage(chunk.usage);
       } else {
         setMessages(prev => {
           const last = prev[prev.length - 1] || '';
@@ -49,6 +54,8 @@ export function ChatPage({ sessionId = 'session-1' }: { sessionId?: string }) {
     if (!input.trim() || isStreaming) return;
     setIsStreaming(true);
     setError(null);
+    setToolCalls([]);
+    setUsage(null);
     setMessages(prev => [...prev, input, '']);
     setInput('');
     try {
@@ -89,6 +96,22 @@ export function ChatPage({ sessionId = 'session-1' }: { sessionId?: string }) {
         {error && (
           <div className="message assistant" style={{ color: '#ff6b6b', maxWidth: '100%' }}>
             ⚠️ {error}
+          </div>
+        )}
+        {toolCalls.length > 0 && (
+          <div className="message assistant" style={{ maxWidth: '100%', fontSize: '0.85em' }}>
+            {toolCalls.map((tc, i) => (
+              <div key={i}>
+                🔧 {tc.name} — {tc.status}{' '}
+                {tc.progress <= 1 ? Math.round(tc.progress * 100) : Math.round(tc.progress)}%
+                {tc.result ? ` · ${tc.result}` : ''}
+              </div>
+            ))}
+          </div>
+        )}
+        {usage && !isStreaming && (
+          <div className="message assistant" style={{ maxWidth: '100%', fontSize: '0.85em', color: '#888' }}>
+            ⚡ tokens: {usage.prompt_tokens}+{usage.completion_tokens} · ${(usage.cost_usd ?? 0).toFixed(4)}
           </div>
         )}
         {isStreaming && (

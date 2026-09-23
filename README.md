@@ -84,6 +84,9 @@ release/win-unpacked/Ayesh.exe --remote-debugging-port=9334
 - Auto-update: `electron-updater` checks on start (production only).
 - Code signing is optional: set `WINDOWS_CSC_LINK` / `MAC_CSC_LINK` repo
   secrets to sign; unsigned builds show SmartScreen/notarization warnings.
+  Bypass without a certificate: Windows → "More info" → "Run anyway";
+  macOS → right-click → Open (or System Settings → Privacy & Security →
+  Open Anyway). Publish SHA256 checksums in release notes.
 
 ## Features
 

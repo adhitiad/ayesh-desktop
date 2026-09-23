@@ -10,6 +10,7 @@ const fakeGrpc = {
   lastGetSession: null as { id: string } | null,
   lastListFiles: null as { path: string } | null,
   lastChatStream: null as FakeChatStream | null,
+  lastInstallSkill: null as { name: string; uninstall: boolean } | null,
 };
 
 class FakeWebContents {
@@ -111,6 +112,10 @@ class FakeAyesh {
   ListSkills(_r: unknown, cb: (e: null, r: unknown) => void) {
     cb(null, { skills: [] });
   }
+  InstallSkill(req: { name: string; uninstall: boolean }, cb: (e: null, r: unknown) => void) {
+    fakeGrpc.lastInstallSkill = req;
+    cb(null, { success: true, message: 'ok' });
+  }
   HealthCheck(_r: unknown, cb: (e: null, r: unknown) => void) {
     cb(null, { healthy: true, version: 'test', postgres_connected: true, redis_connected: true });
   }
@@ -127,6 +132,8 @@ mock.module('electron', () => ({
     on: () => {},
     quit: () => {},
     getPath: () => '',
+    requestSingleInstanceLock: () => true,
+    getVersion: () => 'test',
   },
   BrowserWindow: FakeBrowserWindow,
   ipcMain: {
@@ -170,6 +177,7 @@ test('semua channel IPC terdaftar', () => {
     'sessions:list',
     'sessions:get',
     'skills:list',
+    'skills:install',
     'config:get',
     'config:set',
     'health:check',
@@ -212,6 +220,25 @@ test('config:set grpc_host:port baru → klien di-reconnect', async () => {
   expect(fakeGrpc.clients.length).toBe(before + 1);
   expect(fakeGrpc.clients[before - 1].closed).toBe(true);
   expect(fakeGrpc.clients[before].target).toBe('10.1.2.3:60051');
+});
+
+test('config:set host/grpc_host dengan karakter aneh → fail-closed', async () => {
+  await expect(invoke('config:set', { grpc_host: 'bad host!' })).rejects.toThrow('tidak valid');
+  await expect(invoke('config:set', { host: 'x/y' })).rejects.toThrow('tidak valid');
+});
+
+test('skills:install valid → InstallSkill dipanggil', async () => {
+  const res = (await invoke('skills:install', { name: 'code-review', uninstall: false })) as {
+    success: boolean;
+  };
+  expect(res.success).toBe(true);
+  expect(fakeGrpc.lastInstallSkill).toEqual({ name: 'code-review', uninstall: false });
+  await invoke('skills:install', { name: 'code-review', uninstall: true });
+  expect(fakeGrpc.lastInstallSkill?.uninstall).toBe(true);
+});
+
+test('skills:install nama kosong → tolak', async () => {
+  await expect(invoke('skills:install', { name: '  ' })).rejects.toThrow('tidak valid');
 });
 
 test('sessions:get valid → GetSession dipanggil dengan id', async () => {

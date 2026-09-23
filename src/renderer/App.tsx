@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChatPage } from './pages/Chat';
 import { SkillsPage } from './pages/Skills';
 import { FilesPage } from './pages/Files';
@@ -8,6 +8,17 @@ import { SettingsPage } from './pages/Settings';
 function App() {
   const [page, setPage] = useState('chat');
   const [sessionId, setSessionId] = useState('session-1');
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const h = await (window as any).ayesh.healthCheck();
+        if (!h?.healthy) setPage('settings');
+      } catch {
+        setPage('settings');
+      }
+    })();
+  }, []);
 
   const renderPage = () => {
     switch (page) {

@@ -62,6 +62,17 @@ export function SettingsPage() {
   return (
     <div className="settings-page">
       <h2>Settings</h2>
+      <div className="message assistant" style={{ maxWidth: '100%', fontSize: '0.9em' }}>
+        <strong>Quick start (backend remote-first)</strong>
+        <ol>
+          <li>
+            Jalankan ayesh-core: <code>python main.py</code> (butuh PostgreSQL + Redis + LLM key di{' '}
+            <code>.env</code>)
+          </li>
+          <li>Isi gRPC Host/Port di bawah (default localhost:50051 untuk dev lokal)</li>
+          <li>Klik Save → klien reconnect otomatis → kembali ke tab Chat</li>
+        </ol>
+      </div>
       <div>
         <label>Provider:</label>
         <input value={config.provider} onChange={(e) => setField('provider', e.target.value)} />

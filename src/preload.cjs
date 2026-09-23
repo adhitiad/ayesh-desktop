@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('ayesh', {
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   getSession: (id) => ipcRenderer.invoke('sessions:get', id),
   listSkills: () => ipcRenderer.invoke('skills:list'),
+  installSkill: (name, uninstall) => ipcRenderer.invoke('skills:install', { name, uninstall }),
 
   getConfig: () => ipcRenderer.invoke('config:get'),
   setConfig: (config) => ipcRenderer.invoke('config:set', config),

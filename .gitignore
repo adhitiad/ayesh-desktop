@@ -1,12 +1,13 @@
+# Dependencies
 node_modules/
-dist/
+uv.lock
+
+# Lockfiles di-track untuk reproducible builds (C6)
+# (sebelumnya *.lock / bun.lock / bun.lockb — kini di-track)
+
+# Env
 .env
 .env.local
-*.log
-.DS_Store
-Thumbs.db
-reports/
-.vscode/
 
 # Generated
 src/grpc/
@@ -16,32 +17,23 @@ src/grpc/
 # Artifacts
 setup-*.exe
 *.spec
+reports/
+build/
+dist/
+release/
 
-# Dependencies
-*.lock
-bun.lockb
-bun.lock
-uv.lock
-
-# IDE
-.idea/
+# IDE / OS
 .vscode/
+.idea/
 *.swp
 *.swo
-
-# OS
+.DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Test
+# Test / logs
 coverage/
 *.lcov
-
-# Logs
 logs/
-
-# Build
-build/
-dist/
-release/
+*.log

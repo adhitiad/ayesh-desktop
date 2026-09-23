@@ -179,6 +179,19 @@ function setupIpcHandlers() {
     });
   });
 
+  ipcMain.handle('skills:install', async (event, args) => {
+    const { name, uninstall } = args || {};
+    if (typeof name !== 'string' || !name.trim() || name.trim().length > 200) {
+      throw new Error('skills:install: argumen tidak valid');
+    }
+    return new Promise((resolve, reject) => {
+      grpcClient.InstallSkill({ name: name.trim(), uninstall: uninstall === true }, (err, response) => {
+        if (err) reject(err);
+        else resolve(response);
+      });
+    });
+  });
+
   ipcMain.handle('config:get', async () => {
     return new Promise((resolve, reject) => {
       grpcClient.GetConfig({}, (err, response) => {
@@ -196,6 +209,12 @@ function setupIpcHandlers() {
     for (const key of ['provider', 'model', 'host', 'grpc_host', 'api_key']) {
       if (config[key] !== undefined && typeof config[key] !== 'string') {
         throw new Error(`config:set: ${key} harus string`);
+      }
+    }
+    const HOST_RE = /^[a-zA-Z0-9._-]{1,253}$|^\[[0-9a-fA-F:]+\]$/;
+    for (const key of ['host', 'grpc_host']) {
+      if (config[key] && !HOST_RE.test(config[key])) {
+        throw new Error(`config:set: ${key} tidak valid (fail-closed)`);
       }
     }
     for (const key of ['port', 'grpc_port']) {
@@ -246,22 +265,46 @@ function setupIpcHandlers() {
   });
 }
 
+let logger = console;
+
+async function initLogger() {
+  try {
+    logger = (await import('electron-log/main')).default;
+  } catch {
+    logger = console;
+  }
+}
+
 async function checkForUpdates() {
   if (process.env.NODE_ENV === 'development') return;
   try {
     const { autoUpdater } = await import('electron-updater');
     await autoUpdater.checkForUpdatesAndNotify();
   } catch (err) {
-    console.error('auto-update:', err?.message || err);
+    logger.error?.('auto-update:', err?.message || err);
   }
 }
 
-app.whenReady().then(() => {
-  grpcClient = createGrpcClient();
-  setupIpcHandlers();
-  createWindow();
-  checkForUpdates();
-});
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  app.whenReady().then(async () => {
+    await initLogger();
+    logger.info?.('ayesh-desktop starting', app.getVersion?.() || '');
+    grpcClient = createGrpcClient();
+    setupIpcHandlers();
+    createWindow();
+    checkForUpdates();
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
