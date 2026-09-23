@@ -38,6 +38,9 @@ Desktop.ini
 coverage/
 *.lcov
 
+# Logs
+logs/
+
 # Build
 build/
 dist/

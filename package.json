@@ -2,12 +2,12 @@
   "name": "ayesh-desktop",
   "version": "0.1.0",
   "description": "Ayesh Desktop — Multi-Agent AI Orchestrator",
-  "module": "src/main.js",
+  "main": "src/main.js",
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/main.js & bunx vite",
+    "dev": "bunx vite & NODE_ENV=development electron .",
     "dev:renderer": "bunx vite",
-    "start": "bun run src/main.js",
+    "start": "electron .",
     "build": "bun run build:renderer && bunx electron-builder",
     "build:renderer": "bunx vite build",
     "package": "bunx electron-builder",
@@ -46,6 +46,7 @@
     "files": [
       "src/**/*",
       "proto/**/*",
+      "dist/**/*",
       "node_modules/**/*"
     ],
     "win": {

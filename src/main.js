@@ -1,11 +1,16 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const path = require('path');
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import grpc from '@grpc/grpc-js';
+import protoLoader from '@grpc/proto-loader';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow;
 let grpcClient;
 const GRPC_HOST = process.env.GRPC_HOST || 'localhost:50051';
+const DEV_SERVER_URL = 'http://localhost:5173';
 
 function createGrpcClient() {
   const packageDefinition = protoLoader.loadSync(
@@ -28,17 +33,21 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
+  const distIndex = path.join(__dirname, '..', 'dist', 'index.html');
+  const useDevServer = process.env.NODE_ENV === 'development';
+
+  if (useDevServer) {
+    mainWindow.loadURL(DEV_SERVER_URL).catch(() => mainWindow.loadFile(distIndex));
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+    // Fallback: bila vite dev server tidak jalan, muat build statis
+    mainWindow.loadURL(DEV_SERVER_URL).catch(() => mainWindow.loadFile(distIndex));
   }
 }
 
@@ -49,7 +58,7 @@ function setupIpcHandlers() {
       stream.on('data', (chunk) => {
         mainWindow.webContents.send('chat:chunk', {
           token: chunk.token,
-          toolCalls: chunk.tool_calls.map(tc => ({
+          toolCalls: chunk.tool_calls.map((tc) => ({
             name: tc.name,
             status: tc.status,
             progress: tc.progress,
@@ -58,7 +67,10 @@ function setupIpcHandlers() {
           done: chunk.done,
           usage: chunk.usage,
         });
-        if (chunk.done) resolve(null);
+        if (chunk.done) {
+          stream.end();
+          resolve(null);
+        }
       });
       stream.on('error', reject);
       stream.write({ message, session_id: sessionId, interrupt: false });
@@ -89,9 +101,9 @@ function setupIpcHandlers() {
     });
   });
 
-  ipcMain.handle('files:write', async (event, { path, content }) => {
+  ipcMain.handle('files:write', async (event, { path: filePath, content }) => {
     return new Promise((resolve, reject) => {
-      grpcClient.WriteFile({ path, content }, (err, response) => {
+      grpcClient.WriteFile({ path: filePath, content }, (err, response) => {
         if (err) reject(err);
         else resolve(response);
       });
