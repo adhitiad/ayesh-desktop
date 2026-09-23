@@ -15,10 +15,11 @@ interface ChatChunk {
   };
 }
 
-export function ChatPage() {
+export function ChatPage({ sessionId = 'session-1' }: { sessionId?: string }) {
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,27 +35,39 @@ export function ChatPage() {
       }
     });
 
-    (window as any).ayesh.healthCheck().then((h: any) => setHealth(h));
+    (window as any).ayesh.healthCheck().then((h: any) => setHealth(h)).catch(() => setHealth(null));
 
     return () => unsub();
   }, []);
 
+  const dropEmptyReply = () =>
+    setMessages(prev =>
+      prev.length >= 2 && prev[prev.length - 1] === '' ? prev.slice(0, -1) : prev
+    );
+
   const sendMessage = async () => {
     if (!input.trim() || isStreaming) return;
     setIsStreaming(true);
+    setError(null);
     setMessages(prev => [...prev, input, '']);
     setInput('');
     try {
-      await (window as any).ayesh.sendMessage(input, 'session-1');
-    } catch (err) {
+      await (window as any).ayesh.sendMessage(input, sessionId);
+    } catch (err: any) {
       console.error('Chat error:', err);
+      dropEmptyReply();
+      setError(err?.message || String(err));
       setIsStreaming(false);
     }
   };
 
-  const handleInterrupt = () => {
-    (window as any).ayesh.interruptChat('session-1');
-    setIsStreaming(false);
+  const handleInterrupt = async () => {
+    try {
+      await (window as any).ayesh.interruptChat(sessionId);
+      setIsStreaming(false);
+    } catch (err: any) {
+      setError(err?.message || String(err));
+    }
   };
 
   return (
@@ -62,7 +75,10 @@ export function ChatPage() {
       <div className="messages">
         {health && (
           <div className="message assistant" style={{ maxWidth: '100%' }}>
-            <small>Status: {health.healthy ? '🟢 Connected' : '🔴 Disconnected'} | v{health.version}</small>
+            <small>
+              Status: {health.healthy ? '🟢 Connected' : '🔴 Disconnected'} | v{health.version} |
+              session: {sessionId}
+            </small>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -70,6 +86,11 @@ export function ChatPage() {
             {msg}
           </div>
         ))}
+        {error && (
+          <div className="message assistant" style={{ color: '#ff6b6b', maxWidth: '100%' }}>
+            ⚠️ {error}
+          </div>
+        )}
         {isStreaming && (
           <div className="message assistant">
             <span className="typing">⏳ ...typing</span>

@@ -1,17 +1,20 @@
 appId: com.ayesh.desktop
 productName: Ayesh
 directories:
-  output: dist
+  output: release
 files:
+  - dist/**/*
   - src/**/*
   - proto/**/*
   - node_modules/**/*
+  - "!**/node_modules/electron/**/*"
+  - "!**/node_modules/electron-builder/**/*"
 win:
   target: nsis
   icon: assets/icon.ico
 mac:
   target: dmg
-  icon: assets/icon.icns
+  icon: assets/icon.png
 linux:
   target: AppImage
   icon: assets/icon.png

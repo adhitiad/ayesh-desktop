@@ -12,60 +12,37 @@
     "build:renderer": "bunx vite build",
     "package": "bunx electron-builder",
     "proto:generate": "bunx grpc_tools_node_protoc --js_out=import_style=commonjs,binary:src/grpc --grpc_out=src/grpc --proto_path=proto proto/ayesh.proto",
+    "typecheck": "bunx tsc --noEmit",
     "lint": "bunx eslint src/",
     "test": "bun test"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.0",
     "@grpc/proto-loader": "^0.8.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3",
-    "typescript": "^5.9.3",
-    "vite": "^5.4.0",
-    "tailwindcss": "^3.4.14",
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
+    "bun-types": "^1.4.2",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.16.1",
     "eslint": "^9.9.1",
-    "grpc-tools": "^1.12.1"
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "grpc-tools": "^1.12.1",
+    "postcss": "^8.4.47",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.0"
   },
   "author": "Ayesh Team",
-  "license": "MIT",
-  "build": {
-    "appId": "com.ayesh.desktop",
-    "productName": "Ayesh",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/**/*",
-      "proto/**/*",
-      "dist/**/*",
-      "node_modules/**/*"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
-    },
-    "extraResources": [
-      {
-        "from": "proto/ayesh.proto",
-        "to": "proto/ayesh.proto"
-      }
-    ]
-  }
+  "license": "MIT"
 }

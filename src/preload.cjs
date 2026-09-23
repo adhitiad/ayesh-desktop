@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('ayesh', {
   writeFile: (path, content) => ipcRenderer.invoke('files:write', { path, content }),
 
   listSessions: () => ipcRenderer.invoke('sessions:list'),
+  getSession: (id) => ipcRenderer.invoke('sessions:get', id),
   listSkills: () => ipcRenderer.invoke('skills:list'),
 
   getConfig: () => ipcRenderer.invoke('config:get'),

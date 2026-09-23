@@ -44,3 +44,4 @@ logs/
 # Build
 build/
 dist/
+release/

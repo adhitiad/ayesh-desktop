@@ -1,5 +1,6 @@
 [install]
 packageManager = "bun"
+linker = "isolated"
 
 [scripts]
 dev = ["bun run --watch src/main.js", "bunx vite"]
