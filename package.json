@@ -2,36 +2,38 @@
   "name": "ayesh-desktop",
   "version": "0.1.0",
   "description": "Ayesh Desktop — Multi-Agent AI Orchestrator",
-  "main": "src/main.js",
+  "module": "src/main.js",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently \"node src/main.js\" \"vite\"",
-    "start": "electron .",
-    "build:renderer": "vite build",
-    "build": "npm run build:renderer && electron-builder",
-    "pack": "electron-builder --dir",
-    "lint": "eslint src/",
-    "proto:generate": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:src/grpc --grpc_out=src/grpc --proto_path=proto proto/ayesh.proto"
+    "dev": "bun run --watch src/main.js & bunx vite",
+    "dev:renderer": "bunx vite",
+    "start": "bun run src/main.js",
+    "build": "bun run build:renderer && bunx electron-builder",
+    "build:renderer": "bunx vite build",
+    "package": "bunx electron-builder",
+    "proto:generate": "bunx grpc_tools_node_protoc --js_out=import_style=commonjs,binary:src/grpc --grpc_out=src/grpc --proto_path=proto proto/ayesh.proto",
+    "lint": "bunx eslint src/",
+    "test": "bun test"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.0",
     "@grpc/proto-loader": "^0.8.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "electron": "^31.0.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "concurrently": "^9.1.0",
+    "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
-    "eslint": "^9.9.1",
-    "grpc-tools": "^1.12.1",
     "typescript": "^5.7.2",
     "vite": "^5.4.0",
     "tailwindcss": "^3.4.14",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47"
+    "postcss": "^8.4.47",
+    "eslint": "^9.9.1",
+    "grpc-tools": "^1.12.1"
   },
   "author": "Ayesh Team",
   "license": "MIT",

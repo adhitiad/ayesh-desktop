@@ -1,0 +1,6 @@
+[install]
+packageManager = "bun"
+
+[scripts]
+dev = ["bun run --watch src/main.js", "bunx vite"]
+build = ["bunx vite build", "bunx electron-builder"]
