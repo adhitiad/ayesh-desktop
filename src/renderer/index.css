@@ -4,8 +4,10 @@
   box-sizing: border-box;
 }
 
+/* Font stack disengaja (DESIGN.md §Typography): native look, nol webfont load di Electron. */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #0f0f0f;
   color: #e0e0e0;
 }
@@ -20,6 +22,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   padding: 1rem 2rem;
   background-color: #1a1a1a;
   border-bottom: 1px solid #333;
@@ -30,14 +34,23 @@ body {
   font-size: 1.5rem;
 }
 
-.app-header nav a {
+.app-header nav {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.app-header nav button {
+  background: none;
+  border: none;
+  font: inherit;
   color: #aaa;
-  text-decoration: none;
+  cursor: pointer;
   margin-left: 1.5rem;
+  padding: 0;
   transition: color 0.2s;
 }
 
-.app-header nav a:hover {
+.app-header nav button:hover {
   color: #00d4aa;
 }
 
@@ -45,6 +58,36 @@ main {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
+}
+
+.health-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+.dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot.on {
+  background-color: #51cf66;
+}
+
+.dot.off {
+  background-color: #ff6b6b;
 }
 
 .chat-container {
@@ -66,10 +109,12 @@ main {
   margin-bottom: 0.5rem;
   border-radius: 8px;
   max-width: 80%;
+  overflow-wrap: anywhere;
 }
 
+/* Bubble user: teal-tint gelap, bukan hue baru (alasan: DESIGN.md §Palette, item 011). */
 .message.user {
-  background-color: #1e3a5f;
+  background-color: #12352f;
   margin-left: auto;
   text-align: right;
 }
@@ -84,16 +129,26 @@ main {
   gap: 0.5rem;
   padding: 1rem;
   border-top: 1px solid #333;
+  flex-wrap: wrap;
 }
 
-.input-area input {
-  flex: 1;
+.input-area input,
+.input-area textarea {
+  flex: 1 1 16rem;
+  min-width: 10rem;
   padding: 0.75rem;
   border: 1px solid #444;
   border-radius: 8px;
   background-color: #1a1a1a;
   color: #e0e0e0;
   font-size: 1rem;
+  font-family: inherit;
+}
+
+.input-area textarea {
+  resize: none;
+  max-height: 9rem;
+  overflow-y: auto;
 }
 
 .input-area button {
@@ -117,4 +172,206 @@ main {
 
 .interrupt {
   background-color: #ff4444 !important;
+}
+
+/* Form + kontrol halaman (Settings/Sessions/Skills/Files), konsisten dengan Chat. */
+h2 {
+  margin-bottom: 0.75rem;
+}
+
+.settings-page h3 {
+  margin: 1.25rem 0 0.6rem;
+  color: #00d4aa;
+  font-size: 1rem;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: #e0e0e0;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  accent-color: #00d4aa;
+}
+
+input:focus,
+textarea:focus {
+  border-color: #00d4aa;
+}
+
+label {
+  color: #aaa;
+}
+
+button {
+  font: inherit;
+  color: #e0e0e0;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #666;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus ring (R-32): outline teal 2px, sengaja beda mekanisme dari hover (border abu). */
+:focus-visible {
+  outline: 2px solid #00d4aa;
+  outline-offset: 2px;
+}
+
+.settings-page .field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.settings-page .field label {
+  min-width: 9.5rem;
+  flex-shrink: 0;
+}
+
+.settings-page .field input:not([type="checkbox"]) {
+  flex: 1;
+}
+
+.sessions-page ul,
+.skills-page ul,
+.files-page ul {
+  list-style: none;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sessions-page li,
+.skills-page li,
+.files-page li {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+}
+
+.sessions-page li small {
+  color: #888;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #444;
+  color: #aaa;
+}
+
+.tag.on {
+  color: #51cf66;
+  border-color: #2b5c3f;
+}
+
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.chat-empty-title {
+  color: #e0e0e0;
+  font-size: 1.1rem;
+}
+
+.chat-empty-hint {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.page-empty {
+  color: #888;
+  padding: 1.5rem 0;
+}
+
+/* Indikator streaming: dots animasi, satu-satunya motion di chrome (DESIGN.md E-3). */
+.typing {
+  color: #888;
+}
+
+.typing::after {
+  content: "";
+  animation: typing-dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes typing-dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing::after {
+    animation: none;
+    content: "...";
+  }
+
+  .app-header nav button {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .app-header nav button {
+    margin-left: 0.75rem;
+  }
+
+  main {
+    padding: 1rem;
+  }
+
+  .message {
+    max-width: 95%;
+  }
+
+  .settings-page .field {
+    flex-wrap: wrap;
+  }
+
+  .settings-page .field label {
+    min-width: 0;
+  }
 }

@@ -1,40 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { ChatPage } from './pages/Chat';
-import { SkillsPage } from './pages/Skills';
-import { FilesPage } from './pages/Files';
-import { SessionsPage } from './pages/Sessions';
-import { SettingsPage } from './pages/Settings';
+import React, { useEffect, useState } from "react";
+import { ChatPage } from "./pages/Chat";
+import { SkillsPage } from "./pages/Skills";
+import { FilesPage } from "./pages/Files";
+import { SessionsPage } from "./pages/Sessions";
+import { SettingsPage } from "./pages/Settings";
+
+const newSessionId = () =>
+  `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 function App() {
-  const [page, setPage] = useState('chat');
-  const [sessionId, setSessionId] = useState('session-1');
+  const [page, setPage] = useState("chat");
+  const [sessionId, setSessionId] = useState(newSessionId);
 
   useEffect(() => {
     void (async () => {
       try {
         const h = await (window as any).ayesh.healthCheck();
-        if (!h?.healthy) setPage('settings');
+        if (!h?.healthy) setPage("settings");
       } catch {
-        setPage('settings');
+        setPage("settings");
       }
     })();
   }, []);
 
-  const renderPage = () => {
-    switch (page) {
-      case 'skills': return <SkillsPage />;
-      case 'files': return <FilesPage />;
-      case 'sessions': return (
-        <SessionsPage
-          onOpen={(id) => {
-            setSessionId(id);
-            setPage('chat');
-          }}
-        />
-      );
-      case 'settings': return <SettingsPage />;
-      default: return <ChatPage sessionId={sessionId} />;
-    }
+  const openSession = (id: string) => {
+    setSessionId(id);
+    setPage("chat");
   };
 
   return (
@@ -42,14 +33,41 @@ function App() {
       <header className="app-header">
         <h1>Ayesh</h1>
         <nav>
-          <a href="#" onClick={() => setPage('chat')}>Chat</a>
-          <a href="#" onClick={() => setPage('sessions')}>Sessions</a>
-          <a href="#" onClick={() => setPage('skills')}>Skills</a>
-          <a href="#" onClick={() => setPage('files')}>Files</a>
-          <a href="#" onClick={() => setPage('settings')}>Settings</a>
+          <button type="button" onClick={() => setPage("chat")}>
+            Chat
+          </button>
+          <button type="button" onClick={() => setPage("sessions")}>
+            Sessions
+          </button>
+          <button type="button" onClick={() => setPage("skills")}>
+            Skills
+          </button>
+          <button type="button" onClick={() => setPage("files")}>
+            Files
+          </button>
+          <button type="button" onClick={() => setPage("settings")}>
+            Settings
+          </button>
         </nav>
       </header>
-      <main>{renderPage()}</main>
+      <main>
+        {/* Chat selalu ter-mount (display toggle) agar listener stream tidak terputus
+            saat berpindah tab; token yang datang di tab lain tetap diterima. */}
+        <div style={{ display: page === "chat" ? "contents" : "none" }}>
+          {/* key → remount per sesi: reset state Chat + re-subscribe stream listener */}
+          <ChatPage
+            key={sessionId}
+            sessionId={sessionId}
+            onNewSession={openSession}
+          />
+        </div>
+        {page === "sessions" && <SessionsPage onOpen={openSession} />}
+        {page === "skills" && <SkillsPage />}
+        {page === "files" && <FilesPage />}
+        {page === "settings" && (
+          <SettingsPage onSaved={() => setPage("chat")} />
+        )}
+      </main>
     </div>
   );
 }

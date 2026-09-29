@@ -12,13 +12,13 @@ Desktop client for Ayesh Multi-Agent AI Orchestrator.
 ## Backend deployment (remote-first)
 
 Ayesh Desktop is a **thin client**. The backend (ayesh-core, Python gRPC server)
-runs **remotely** — the desktop app connects to it via `grpc_host`/`grpc_port`:
+runs **remotely**; the desktop app connects to it via `grpc_host`/`grpc_port`:
 
-- **Default (dev)**: `localhost:50051` — run ayesh-core on the same machine.
+- **Default (dev)**: `localhost:50051`; run ayesh-core on the same machine.
 - **Remote**: run ayesh-core anywhere (VPS/docker), then set the address in
-  **Settings → gRPC Host/Port**. The client reconnects automatically on save —
-  no app restart needed. The server must be reachable and trusted (insecure
-  credentials today; TLS is tracked as D5).
+  **Settings → gRPC Host/Port**. The client reconnects automatically on save;
+  no app restart needed. The server must be reachable; over untrusted networks
+  enable **Settings → gRPC TLS** (see below).
 
 To deploy a backend, see the `ayesh-core` repository (`python bootstrap.py`,
 `python main.py`; requires PostgreSQL + Redis + at least one LLM key in `.env`).
@@ -26,10 +26,30 @@ To deploy a backend, see the `ayesh-core` repository (`python bootstrap.py`,
 Bundling the backend as a local sidecar (Python + Postgres + Redis inside the
 installer) is **not** planned for this release; it remains a possible P3 item.
 
+## gRPC TLS (opsional, direkomendasikan utk remote)
+
+**Server (ayesh-core)**: set **kedua** env lalu restart; sebagian terisi /
+file hilang → server gagal start (fail-closed):
+
+```bash
+export GRPC_TLS_CERT=/path/server.crt
+export GRPC_TLS_KEY=/path/server.key
+python main.py
+# self-signed utk LAN:
+# openssl req -x509 -newkey rsa:2048 -nodes -keyout server.key -out server.crt -days 365 -subj "/CN=localhost"
+```
+
+**Klien (desktop)**: **Settings → centang "gRPC TLS"** + isi path file CA PEM
+untuk self-signed (kosong = system roots) → **Save** → klien reconnect dengan
+TLS. Setting disimpan lokal (`userData/settings.json`); klien tidak pernah
+diam-diam fallback ke insecure. Settings menampilkan status TLS server
+(`GetConfig.grpc_tls`) dan memperingatkan bila server TLS aktif tapi klien
+masih mati.
+
 ## Quick Start (development)
 
 ```bash
-# 1. Start the backend (terminal 1) — from ayesh-core/
+# 1. Start the backend from ayesh-core/ (terminal 1)
 python main.py            # gRPC :50051 + REST :8080 (needs Redis, PG, .env LLM key)
 
 # 2. Install dependencies (terminal 2)
@@ -44,16 +64,16 @@ If the backend is not on `localhost:50051`, open **Settings** and set
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `bun run dev` | Vite dev server + Electron (development) |
-| `bun run build` | Production build: renderer → `dist/` + installer → `release/` |
-| `bun run build:renderer` | Vite build only (injects CSP meta) |
-| `bun run package` | electron-builder only (packaging, no renderer build) |
-| `bun run typecheck` | `tsc --noEmit` |
-| `bun run lint` | ESLint 9 flat config over `src/` |
-| `bun test` | Bun test suite (see `tests/`) |
-| `bun run proto:generate` | Regenerate gRPC stubs (not required for normal dev — proto loaded at runtime) |
+| Command                  | Description                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `bun run dev`            | Vite dev server + Electron (development)                                     |
+| `bun run build`          | Production build: renderer → `dist/` + installer → `release/`                |
+| `bun run build:renderer` | Vite build only (injects CSP meta)                                           |
+| `bun run package`        | electron-builder only (packaging, no renderer build)                         |
+| `bun run typecheck`      | `tsc --noEmit`                                                               |
+| `bun run lint`           | ESLint 9 flat config over `src/`                                             |
+| `bun test`               | Bun test suite (see `tests/`)                                                |
+| `bun run proto:generate` | Regenerate gRPC stubs (not required for normal dev; proto loaded at runtime) |
 
 ## IPC communication
 
@@ -78,8 +98,8 @@ release/win-unpacked/Ayesh.exe --remote-debugging-port=9334
 ## Packaging & release
 
 - Config: `electron-builder.yml` (single source; output `release/`).
-- Targets: Windows NSIS, macOS DMG, Linux AppImage — icons in `assets/`.
-- CI: `.github/workflows/ci.yml` — lint → typecheck → test → build on
+- Targets: Windows NSIS, macOS DMG, Linux AppImage; icons in `assets/`.
+- CI: `.github/workflows/ci.yml`: lint → typecheck → test → build on
   Windows/macOS/Linux, uploads artifacts, publishes a GitHub release on `v*` tags.
 - Auto-update: `electron-updater` checks on start (production only).
 - Code signing is optional: set `WINDOWS_CSC_LINK` / `MAC_CSC_LINK` repo
@@ -94,7 +114,8 @@ release/win-unpacked/Ayesh.exe --remote-debugging-port=9334
 - Sessions list + detail + open in chat
 - Files browser (read/write via server-side path checks)
 - Skills management
-- Settings (provider/model/REST/gRPC + masked API key)
+- Settings (provider/model/REST/gRPC + masked API key + TLS klien)
+- System tray (minimize-to-tray saat tutup, menu Buka Ayesh / Keluar)
 - Health check (Postgres/Redis status)
 
 ## Cross-platform

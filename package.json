@@ -1,7 +1,7 @@
 {
   "name": "ayesh-desktop",
   "version": "0.1.0",
-  "description": "Ayesh Desktop — Multi-Agent AI Orchestrator",
+  "description": "Ayesh Desktop · Multi-Agent AI Orchestrator",
   "main": "src/main.js",
   "type": "module",
   "scripts": {
@@ -10,11 +10,12 @@
     "start": "electron .",
     "build": "bun run build:renderer && bunx electron-builder",
     "build:renderer": "bunx vite build",
-    "package": "bunx electron-builder",
+    "package": "bun run build:renderer && bunx electron-builder",
     "proto:generate": "bunx grpc_tools_node_protoc --js_out=import_style=commonjs,binary:src/grpc --grpc_out=src/grpc --proto_path=proto proto/ayesh.proto",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx eslint src/",
-    "test": "bun test"
+    "test": "bun test",
+    "smoke": "node scripts/smoke.cjs"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.0",

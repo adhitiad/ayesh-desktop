@@ -3,7 +3,7 @@ node_modules/
 uv.lock
 
 # Lockfiles di-track untuk reproducible builds (C6)
-# (sebelumnya *.lock / bun.lock / bun.lockb — kini di-track)
+# (sebelumnya *.lock / bun.lock / bun.lockb; kini di-track)
 
 # Env
 .env

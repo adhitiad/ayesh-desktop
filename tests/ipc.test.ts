@@ -1,8 +1,16 @@
-import { test, expect, mock } from 'bun:test';
+import { test, expect, mock } from "bun:test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-process.env.NODE_ENV = 'development';
+process.env.NODE_ENV = "development";
 
-const handlers = new Map<string, (event: unknown, ...args: unknown[]) => Promise<unknown>>();
+const tmpUserData = fs.mkdtempSync(path.join(os.tmpdir(), "ayesh-test-"));
+
+const handlers = new Map<
+  string,
+  (event: unknown, ...args: unknown[]) => Promise<unknown>
+>();
 
 const fakeGrpc = {
   clients: [] as Array<{ target: string; closed: boolean }>,
@@ -11,6 +19,8 @@ const fakeGrpc = {
   lastListFiles: null as { path: string } | null,
   lastChatStream: null as FakeChatStream | null,
   lastInstallSkill: null as { name: string; uninstall: boolean } | null,
+  lastGetConfigOpts: null as { deadline?: number } | null,
+  sslCalls: 0,
 };
 
 class FakeWebContents {
@@ -26,6 +36,8 @@ class FakeWebContents {
 class FakeBrowserWindow {
   static instances: FakeBrowserWindow[] = [];
   webContents = new FakeWebContents();
+  handlers: Record<string, Array<(arg: unknown) => void>> = {};
+  hidden = false;
   constructor() {
     FakeBrowserWindow.instances.push(this);
   }
@@ -35,9 +47,36 @@ class FakeBrowserWindow {
   loadFile() {
     return Promise.resolve();
   }
+  on(ev: string, cb: (arg: unknown) => void) {
+    (this.handlers[ev] ||= []).push(cb);
+  }
+  hide() {
+    this.hidden = true;
+  }
+  show() {
+    this.hidden = false;
+  }
+  focus() {}
+  restore() {}
+  isMinimized() {
+    return false;
+  }
   static getAllWindows() {
     return FakeBrowserWindow.instances;
   }
+}
+
+class FakeTray {
+  static instances: FakeTray[] = [];
+  menu: { template: unknown[] } | null = null;
+  constructor(_image: unknown) {
+    FakeTray.instances.push(this);
+  }
+  setToolTip(_t: string) {}
+  setContextMenu(m: { template: unknown[] }) {
+    this.menu = m;
+  }
+  on(_ev: string, _cb: () => void) {}
 }
 
 class FakeChatStream {
@@ -53,7 +92,7 @@ class FakeChatStream {
     if (FakeChatStream.autoDone) {
       queueMicrotask(() => {
         (this.handlers.data || []).forEach((f) =>
-          f({ token: 'halo', tool_calls: [], done: true, usage: null })
+          f({ token: "halo", tool_calls: [], done: true, usage: null }),
         );
       });
     }
@@ -77,47 +116,88 @@ class FakeAyesh {
     const last = fakeGrpc.clients[fakeGrpc.clients.length - 1];
     if (last) last.closed = true;
   }
-  GetConfig(_req: unknown, cb: (e: null, r: unknown) => void) {
+  GetConfig(
+    _req: unknown,
+    opts: { deadline?: number },
+    cb: (e: null, r: unknown) => void,
+  ) {
+    fakeGrpc.lastGetConfigOpts = opts;
     cb(null, {
-      provider: 'groq',
-      api_key: 'sk-abcdef123456',
-      model: 'llama-3',
-      host: '',
+      provider: "groq",
+      api_key: "sk-abcdef123456",
+      model: "llama-3",
+      host: "",
       port: 8080,
-      grpc_host: 'localhost',
+      grpc_host: "localhost",
       grpc_port: 50051,
+      grpc_tls: false,
     });
   }
-  SetConfig(req: { config: Record<string, unknown> }, cb: (e: null, r: unknown) => void) {
+  SetConfig(
+    req: { config: Record<string, unknown> },
+    _opts: unknown,
+    cb: (e: null, r: unknown) => void,
+  ) {
     fakeGrpc.lastSetConfig = req.config;
-    cb(null, { success: true, message: 'ok' });
+    cb(null, { success: true, message: "ok" });
   }
-  GetSession(req: { id: string }, cb: (e: null, r: unknown) => void) {
+  GetSession(
+    req: { id: string },
+    _opts: unknown,
+    cb: (e: null, r: unknown) => void,
+  ) {
     fakeGrpc.lastGetSession = req;
-    cb(null, { id: req.id, agent_type: 'code', created_at: 't', last_message: 'm' });
+    cb(null, {
+      id: req.id,
+      agent_type: "code",
+      created_at: "t",
+      last_message: "m",
+      history: "[]",
+    });
   }
-  ListSessions(_req: unknown, cb: (e: null, r: unknown) => void) {
-    cb(null, { sessions: [{ id: 's1', agent_type: 'chat', created_at: 't', last_message: 'm' }] });
+  ListSessions(
+    _req: unknown,
+    _opts: unknown,
+    cb: (e: null, r: unknown) => void,
+  ) {
+    cb(null, {
+      sessions: [
+        { id: "s1", agent_type: "chat", created_at: "t", last_message: "m" },
+      ],
+    });
   }
-  ListFiles(req: { path: string }, cb: (e: null, r: unknown) => void) {
+  ListFiles(
+    req: { path: string },
+    _opts: unknown,
+    cb: (e: null, r: unknown) => void,
+  ) {
     fakeGrpc.lastListFiles = req;
     cb(null, { files: [] });
   }
-  ReadFile(_r: unknown, cb: (e: null, r: unknown) => void) {
-    cb(null, { content: 'x', encoding: 'utf-8' });
+  ReadFile(_r: unknown, _opts: unknown, cb: (e: null, r: unknown) => void) {
+    cb(null, { content: "x", encoding: "utf-8" });
   }
-  WriteFile(_r: unknown, cb: (e: null, r: unknown) => void) {
-    cb(null, { success: true, message: '' });
+  WriteFile(_r: unknown, _opts: unknown, cb: (e: null, r: unknown) => void) {
+    cb(null, { success: true, message: "" });
   }
-  ListSkills(_r: unknown, cb: (e: null, r: unknown) => void) {
+  ListSkills(_r: unknown, _opts: unknown, cb: (e: null, r: unknown) => void) {
     cb(null, { skills: [] });
   }
-  InstallSkill(req: { name: string; uninstall: boolean }, cb: (e: null, r: unknown) => void) {
+  InstallSkill(
+    req: { name: string; uninstall: boolean },
+    _opts: unknown,
+    cb: (e: null, r: unknown) => void,
+  ) {
     fakeGrpc.lastInstallSkill = req;
-    cb(null, { success: true, message: 'ok' });
+    cb(null, { success: true, message: "ok" });
   }
-  HealthCheck(_r: unknown, cb: (e: null, r: unknown) => void) {
-    cb(null, { healthy: true, version: 'test', postgres_connected: true, redis_connected: true });
+  HealthCheck(_r: unknown, _opts: unknown, cb: (e: null, r: unknown) => void) {
+    cb(null, {
+      healthy: true,
+      version: "test",
+      postgres_connected: true,
+      redis_connected: true,
+    });
   }
   ChatStream() {
     const stream = new FakeChatStream();
@@ -126,181 +206,371 @@ class FakeAyesh {
   }
 }
 
-mock.module('electron', () => ({
+mock.module("electron", () => ({
   app: {
     whenReady: () => Promise.resolve(),
     on: () => {},
     quit: () => {},
-    getPath: () => '',
+    getPath: () => tmpUserData,
     requestSingleInstanceLock: () => true,
-    getVersion: () => 'test',
+    getVersion: () => "test",
+    isPackaged: false,
   },
   BrowserWindow: FakeBrowserWindow,
+  Tray: FakeTray,
+  Menu: {
+    buildFromTemplate: (template: unknown[]) => ({ template }),
+  },
+  nativeImage: {
+    createFromPath: () => ({ isEmpty: () => false }),
+    createFromBuffer: () => ({ isEmpty: () => false }),
+    createEmpty: () => ({ isEmpty: () => true }),
+  },
   ipcMain: {
-    handle: (channel: string, fn: (event: unknown, ...args: unknown[]) => Promise<unknown>) => {
+    handle: (
+      channel: string,
+      fn: (event: unknown, ...args: unknown[]) => Promise<unknown>,
+    ) => {
       handlers.set(channel, fn);
     },
     on: () => {},
   },
 }));
 
-mock.module('@grpc/grpc-js', () => ({
-  default: {
-    credentials: { createInsecure: () => ({}) },
+mock.module("@grpc/grpc-js", () => {
+  const creds = {
+    createInsecure: () => ({ kind: "insecure" }),
+    createSsl: (_rootCerts?: unknown) => {
+      fakeGrpc.sslCalls += 1;
+      return { kind: "ssl" };
+    },
+  };
+  return {
+    default: {
+      credentials: creds,
+      loadPackageDefinition: () => ({ ayesh: { AyeshService: FakeAyesh } }),
+    },
+    credentials: creds,
     loadPackageDefinition: () => ({ ayesh: { AyeshService: FakeAyesh } }),
-  },
-  credentials: { createInsecure: () => ({}) },
-  loadPackageDefinition: () => ({ ayesh: { AyeshService: FakeAyesh } }),
-}));
+  };
+});
 
-mock.module('@grpc/proto-loader', () => ({
+mock.module("@grpc/proto-loader", () => ({
   default: { loadSync: () => ({}) },
   loadSync: () => ({}),
 }));
 
-await import('../src/main.js');
+await import("../src/main.js");
 await new Promise((r) => setTimeout(r, 20));
 
 const invoke = (channel: string, ...args: unknown[]) =>
-  (handlers.get(channel) as (e: unknown, ...a: unknown[]) => Promise<unknown>)({}, ...args);
+  (handlers.get(channel) as (e: unknown, ...a: unknown[]) => Promise<unknown>)(
+    {},
+    ...args,
+  );
 
 const invokeNoArgs = (channel: string) =>
   (handlers.get(channel) as () => Promise<unknown>)();
 
-test('semua channel IPC terdaftar', () => {
+test("semua channel IPC terdaftar", () => {
   for (const ch of [
-    'chat:send',
-    'chat:interrupt',
-    'files:list',
-    'files:read',
-    'files:write',
-    'sessions:list',
-    'sessions:get',
-    'skills:list',
-    'skills:install',
-    'config:get',
-    'config:set',
-    'health:check',
+    "chat:send",
+    "chat:interrupt",
+    "files:list",
+    "files:read",
+    "files:write",
+    "sessions:list",
+    "sessions:get",
+    "skills:list",
+    "skills:install",
+    "config:get",
+    "config:set",
+    "health:check",
   ]) {
     expect(handlers.has(ch)).toBe(true);
   }
 });
 
-test('config:get meng-mask api_key', async () => {
-  const cfg = (await invokeNoArgs('config:get')) as { api_key: string; provider: string };
-  expect(cfg.provider).toBe('groq');
-  expect(cfg.api_key).toBe('sk-a***56');
-  expect(cfg.api_key).not.toContain('abcdef1234');
+test("config:get meng-mask api_key", async () => {
+  const cfg = (await invokeNoArgs("config:get")) as {
+    api_key: string;
+    provider: string;
+  };
+  expect(cfg.provider).toBe("groq");
+  expect(cfg.api_key).toBe("sk-a***56");
+  expect(cfg.api_key).not.toContain("abcdef1234");
 });
 
-test('config:set tanpa api_key memakai key asli dari cache', async () => {
-  await invokeNoArgs('config:get');
-  const res = (await invoke('config:set', { provider: 'groq', model: 'baru' })) as {
+test("config:set tanpa api_key memakai key asli dari cache", async () => {
+  await invokeNoArgs("config:get");
+  const res = (await invoke("config:set", {
+    provider: "groq",
+    model: "baru",
+  })) as {
     success: boolean;
     reconnected: boolean;
   };
   expect(res.success).toBe(true);
-  expect(fakeGrpc.lastSetConfig?.api_key).toBe('sk-abcdef123456');
+  expect(fakeGrpc.lastSetConfig?.api_key).toBe("sk-abcdef123456");
   expect(res.reconnected).toBe(false);
 });
 
-test('config:set menolak port tidak valid (fail-closed)', async () => {
-  await expect(invoke('config:set', { port: 'bukan-angka' })).rejects.toThrow('port tidak valid');
-  await expect(invoke('config:set', { grpc_port: 99999 })).rejects.toThrow('tidak valid');
-  await expect(invoke('config:set', { model: 123 })).rejects.toThrow('harus string');
+test("config:set menolak port tidak valid (fail-closed)", async () => {
+  await expect(invoke("config:set", { port: "bukan-angka" })).rejects.toThrow(
+    "port tidak valid",
+  );
+  await expect(invoke("config:set", { grpc_port: 99999 })).rejects.toThrow(
+    "tidak valid",
+  );
+  await expect(invoke("config:set", { model: 123 })).rejects.toThrow(
+    "harus string",
+  );
 });
 
-test('config:set grpc_host:port baru → klien di-reconnect', async () => {
-  await invokeNoArgs('config:get');
+test("config:set grpc_host:port baru → klien di-reconnect", async () => {
+  await invokeNoArgs("config:get");
   const before = fakeGrpc.clients.length;
-  const res = (await invoke('config:set', { grpc_host: '10.1.2.3', grpc_port: 60051 })) as {
+  const res = (await invoke("config:set", {
+    grpc_host: "10.1.2.3",
+    grpc_port: 60051,
+  })) as {
     reconnected: boolean;
   };
   expect(res.reconnected).toBe(true);
   expect(fakeGrpc.clients.length).toBe(before + 1);
   expect(fakeGrpc.clients[before - 1].closed).toBe(true);
-  expect(fakeGrpc.clients[before].target).toBe('10.1.2.3:60051');
+  expect(fakeGrpc.clients[before].target).toBe("10.1.2.3:60051");
 });
 
-test('config:set host/grpc_host dengan karakter aneh → fail-closed', async () => {
-  await expect(invoke('config:set', { grpc_host: 'bad host!' })).rejects.toThrow('tidak valid');
-  await expect(invoke('config:set', { host: 'x/y' })).rejects.toThrow('tidak valid');
+test("config:set host/grpc_host dengan karakter aneh → fail-closed", async () => {
+  await expect(
+    invoke("config:set", { grpc_host: "bad host!" }),
+  ).rejects.toThrow("tidak valid");
+  await expect(invoke("config:set", { host: "x/y" })).rejects.toThrow(
+    "tidak valid",
+  );
 });
 
-test('skills:install valid → InstallSkill dipanggil', async () => {
-  const res = (await invoke('skills:install', { name: 'code-review', uninstall: false })) as {
+test("skills:install valid → InstallSkill dipanggil", async () => {
+  const res = (await invoke("skills:install", {
+    name: "code-review",
+    uninstall: false,
+  })) as {
     success: boolean;
   };
   expect(res.success).toBe(true);
-  expect(fakeGrpc.lastInstallSkill).toEqual({ name: 'code-review', uninstall: false });
-  await invoke('skills:install', { name: 'code-review', uninstall: true });
+  expect(fakeGrpc.lastInstallSkill).toEqual({
+    name: "code-review",
+    uninstall: false,
+  });
+  await invoke("skills:install", { name: "code-review", uninstall: true });
   expect(fakeGrpc.lastInstallSkill?.uninstall).toBe(true);
 });
 
-test('skills:install nama kosong → tolak', async () => {
-  await expect(invoke('skills:install', { name: '  ' })).rejects.toThrow('tidak valid');
-});
-
-test('sessions:get valid → GetSession dipanggil dengan id', async () => {
-  const s = (await invoke('sessions:get', 'abc-123')) as { id: string };
-  expect(s.id).toBe('abc-123');
-  expect(fakeGrpc.lastGetSession?.id).toBe('abc-123');
-});
-
-test('sessions:get id kosong → tolak', async () => {
-  await expect(invoke('sessions:get', '  ')).rejects.toThrow('tidak valid');
-});
-
-test('files:list path kosong → tolak', async () => {
-  await expect(invoke('files:list', '')).rejects.toThrow('tidak valid');
-});
-
-test('chat:send argumen tidak valid → tolak', async () => {
-  await expect(invoke('chat:send', { message: '', sessionId: 's' })).rejects.toThrow(
-    'tidak valid'
+test("skills:install nama kosong → tolak", async () => {
+  await expect(invoke("skills:install", { name: "  " })).rejects.toThrow(
+    "tidak valid",
   );
-  await expect(invoke('chat:send', { message: 'hi' })).rejects.toThrow('tidak valid');
 });
 
-test('chat:send valid → stream ditulis, chunk.done resolve, chunk terkirim ke renderer', async () => {
-  const done = invoke('chat:send', { message: 'halo', sessionId: 'sess-1' });
+test("sessions:get valid → GetSession dipanggil dengan id", async () => {
+  const s = (await invoke("sessions:get", "abc-123")) as { id: string };
+  expect(s.id).toBe("abc-123");
+  expect(fakeGrpc.lastGetSession?.id).toBe("abc-123");
+});
+
+test("sessions:get id kosong → tolak", async () => {
+  await expect(invoke("sessions:get", "  ")).rejects.toThrow("tidak valid");
+});
+
+test("files:list path kosong → tolak", async () => {
+  await expect(invoke("files:list", "")).rejects.toThrow("tidak valid");
+});
+
+test("chat:send argumen tidak valid → tolak", async () => {
+  await expect(
+    invoke("chat:send", { message: "", sessionId: "s" }),
+  ).rejects.toThrow("tidak valid");
+  await expect(invoke("chat:send", { message: "hi" })).rejects.toThrow(
+    "tidak valid",
+  );
+});
+
+test("chat:send valid → stream ditulis, chunk.done resolve, chunk terkirim ke renderer", async () => {
+  const done = invoke("chat:send", { message: "halo", sessionId: "sess-1" });
   await done;
   const stream = fakeGrpc.lastChatStream!;
-  expect(stream.written[0]).toEqual({ message: 'halo', session_id: 'sess-1', interrupt: false });
-  const sent = FakeBrowserWindow.instances[0].webContents.sent.filter((s) => s.ch === 'chat:chunk');
+  expect(stream.written[0]).toEqual({
+    message: "halo",
+    session_id: "sess-1",
+    interrupt: false,
+  });
+  const sent = FakeBrowserWindow.instances[0].webContents.sent.filter(
+    (s) => s.ch === "chat:chunk",
+  );
   expect(sent.length).toBeGreaterThan(0);
-  expect((sent[sent.length - 1].data as { token: string }).token).toBe('halo');
+  const lastData = sent[sent.length - 1].data as {
+    token: string;
+    sessionId: string;
+  };
+  expect(lastData.token).toBe("halo");
+  expect(lastData.sessionId).toBe("sess-1");
 });
 
-test('chat:interrupt tanpa stream aktif → {interrupted:false}', async () => {
-  const res = (await invoke('chat:interrupt', { sessionId: 'tidak-ada' })) as {
+test("chat:interrupt tanpa stream aktif → {interrupted:false}", async () => {
+  const res = (await invoke("chat:interrupt", { sessionId: "tidak-ada" })) as {
     interrupted: boolean;
   };
   expect(res.interrupted).toBe(false);
 });
 
-test('chat:interrupt stream aktif → interrupt:true di stream yang sama + end', async () => {
+test("chat:interrupt stream aktif → interrupt:true di stream yang sama + end", async () => {
   FakeChatStream.autoDone = false;
   try {
-    const pending = invoke('chat:send', { message: 'x', sessionId: 'sess-2' });
+    const pending = invoke("chat:send", { message: "x", sessionId: "sess-2" });
     pending.catch(() => {});
     await new Promise((r) => setTimeout(r, 5));
     const stream = fakeGrpc.lastChatStream!;
-    const res = (await invoke('chat:interrupt', { sessionId: 'sess-2' })) as {
+    const res = (await invoke("chat:interrupt", { sessionId: "sess-2" })) as {
       interrupted: boolean;
     };
     expect(res.interrupted).toBe(true);
     const last = stream.written[stream.written.length - 1];
     expect(last.interrupt).toBe(true);
-    expect(last.session_id).toBe('sess-2');
+    expect(last.session_id).toBe("sess-2");
     expect(stream.ended).toBe(true);
   } finally {
     FakeChatStream.autoDone = true;
   }
 });
 
-test('health:check → healthy dari server', async () => {
-  const h = (await invokeNoArgs('health:check')) as { healthy: boolean; version: string };
+test("health:check → healthy dari server", async () => {
+  const h = (await invokeNoArgs("health:check")) as {
+    healthy: boolean;
+    version: string;
+  };
   expect(h.healthy).toBe(true);
-  expect(h.version).toBe('test');
+  expect(h.version).toBe("test");
+});
+
+test("config:set grpc_tls non-boolean → tolak (fail-closed)", async () => {
+  await expect(invoke("config:set", { grpc_tls: "yes" })).rejects.toThrow(
+    "harus boolean",
+  );
+});
+
+test("config:set grpc_tls:true + CA valid → reconnect dengan createSsl", async () => {
+  await invokeNoArgs("config:get");
+  const caPath = path.join(tmpUserData, "ca.pem");
+  fs.writeFileSync(caPath, "FAKECA");
+  const before = fakeGrpc.clients.length;
+  const sslBefore = fakeGrpc.sslCalls;
+  const res = (await invoke("config:set", {
+    grpc_tls: true,
+    grpc_tls_ca: caPath,
+  })) as {
+    reconnected: boolean;
+    grpc_tls_enabled: boolean;
+  };
+  expect(res.reconnected).toBe(true);
+  expect(res.grpc_tls_enabled).toBe(true);
+  expect(fakeGrpc.sslCalls).toBe(sslBefore + 1);
+  expect(fakeGrpc.clients.length).toBe(before + 1);
+  expect(fakeGrpc.lastSetConfig).not.toHaveProperty("grpc_tls");
+  expect(fakeGrpc.lastSetConfig).not.toHaveProperty("grpc_tls_ca");
+  const saved = JSON.parse(
+    fs.readFileSync(path.join(tmpUserData, "settings.json"), "utf8"),
+  );
+  expect(saved.grpc_tls).toBe(true);
+  expect(saved.grpc_tls_ca).toBe(caPath);
+});
+
+test("config:set grpc_tls:true + CA hilang → tolak (fail-closed)", async () => {
+  await expect(
+    invoke("config:set", {
+      grpc_tls: true,
+      grpc_tls_ca: path.join(tmpUserData, "hilang.pem"),
+    }),
+  ).rejects.toThrow("tidak ditemukan");
+});
+
+test("config:get mengembalikan state TLS klien lokal", async () => {
+  const cfg = (await invokeNoArgs("config:get")) as {
+    grpc_tls_enabled: boolean;
+  };
+  expect(cfg.grpc_tls_enabled).toBe(true);
+});
+
+test("tray dibuat saat boot dengan menu Buka/Keluar", async () => {
+  expect(FakeTray.instances.length).toBeGreaterThanOrEqual(1);
+  const menu = FakeTray.instances[0].menu;
+  expect(menu).not.toBeNull();
+  const labels = (menu!.template as Array<{ label?: string }>).map(
+    (i) => i.label,
+  );
+  expect(labels).toContain("Buka Ayesh");
+  expect(labels).toContain("Keluar");
+});
+
+test("unary RPC memakai deadline 15 detik (UI tidak terkunci bila server menggantung)", async () => {
+  await invokeNoArgs("config:get");
+  const opts = fakeGrpc.lastGetConfigOpts;
+  expect(opts).not.toBeNull();
+  expect(opts!.deadline).toBeGreaterThan(Date.now());
+  expect(opts!.deadline).toBeLessThanOrEqual(Date.now() + 16000);
+});
+
+test("target gRPC host:port dipersist ke settings.json (bertahan restart)", async () => {
+  await invoke("config:set", { grpc_host: "10.9.9.9", grpc_port: 50061 });
+  const saved = JSON.parse(
+    fs.readFileSync(path.join(tmpUserData, "settings.json"), "utf8"),
+  );
+  expect(saved.grpc_host).toBe("10.9.9.9");
+  expect(saved.grpc_port).toBe(50061);
+  expect(typeof saved.grpc_tls).toBe("boolean");
+});
+
+test("chat:send sesi sama saat stream aktif → stream lama diakhiri & promise lama reject", async () => {
+  FakeChatStream.autoDone = false;
+  try {
+    let p1Err = "";
+    const p1 = invoke("chat:send", {
+      message: "pertama",
+      sessionId: "sess-rep",
+    });
+    p1.catch((e: unknown) => {
+      p1Err = (e as Error)?.message || String(e);
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    const first = fakeGrpc.lastChatStream!;
+    const p2 = invoke("chat:send", { message: "kedua", sessionId: "sess-rep" });
+    p2.catch(() => {});
+    await new Promise((r) => setTimeout(r, 5));
+    expect(first.ended).toBe(true);
+    expect(p1Err).toContain("digantikan");
+    expect(fakeGrpc.lastChatStream).not.toBe(first);
+    await invoke("chat:interrupt", { sessionId: "sess-rep" });
+  } finally {
+    FakeChatStream.autoDone = true;
+  }
+});
+
+test("chat:stream berakhir tanpa done → promise reject (isStreaming tidak menempel)", async () => {
+  FakeChatStream.autoDone = false;
+  try {
+    let err = "";
+    const pending = invoke("chat:send", {
+      message: "x",
+      sessionId: "sess-noend",
+    });
+    pending.catch((e: unknown) => {
+      err = (e as Error)?.message || String(e);
+    });
+    await new Promise((r) => setTimeout(r, 5));
+    fakeGrpc.lastChatStream!.emit("end", undefined);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(err).toContain("berakhir tanpa done");
+  } finally {
+    FakeChatStream.autoDone = true;
+  }
 });
