@@ -17,6 +17,8 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,23 +42,33 @@ jobs:
       - name: Build renderer
         run: bun run build:renderer
 
+      - name: Setup code signing (only when secrets present)
+        shell: bash
+        env:
+          WIN_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ] && [ -n "$WIN_CSC_LINK" ]; then
+            echo "CSC_LINK=$WIN_CSC_LINK" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$WIN_CSC_KEY_PASSWORD" >> "$GITHUB_ENV"
+          elif [ "$RUNNER_OS" = "macOS" ] && [ -n "$MAC_CSC_LINK" ]; then
+            echo "CSC_LINK=$MAC_CSC_LINK" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$MAC_CSC_KEY_PASSWORD" >> "$GITHUB_ENV"
+          fi
+
       - name: Package (Windows)
         if: runner.os == 'Windows'
-        run: bunx electron-builder --win
-        env:
-          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+        run: bunx electron-builder --win --publish onTagOrDraft
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
-        run: bunx electron-builder --mac
-        env:
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: bunx electron-builder --mac --publish onTagOrDraft
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
-        run: bunx electron-builder --linux
+        run: bunx electron-builder --linux --publish onTagOrDraft
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
