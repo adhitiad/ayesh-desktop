@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatPage } from "./pages/Chat";
 import { SkillsPage } from "./pages/Skills";
 import { FilesPage } from "./pages/Files";

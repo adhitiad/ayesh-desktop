@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface ChatChunk {
   sessionId?: string;
@@ -27,7 +27,7 @@ export function ChatPage({
   onNewSession,
 }: {
   sessionId: string;
-  onNewSession: (id: string) => void;
+  onNewSession: (_id: string) => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");

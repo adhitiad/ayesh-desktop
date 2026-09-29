@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 interface Session {
   id: string;
@@ -10,7 +10,7 @@ interface Session {
 export function SessionsPage({
   onOpen,
 }: {
-  onOpen: (sessionId: string) => void;
+  onOpen: (_sessionId: string) => void;
 }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [detail, setDetail] = useState<Session | null>(null);
